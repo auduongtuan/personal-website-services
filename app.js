@@ -1,20 +1,46 @@
 const port = process.env.PORT || 3000;
-const host = ("RENDER" in process.env) ? `0.0.0.0` : `localhost`;
+const host = "RENDER" in process.env ? `0.0.0.0` : `localhost`;
 
-const fastify = require('fastify')({
-  logger: true
-})
+var ffprobe = require("ffprobe"),
+  ffprobeStatic = require("ffprobe-static");
 
-fastify.get('/', function (request, reply) {
-  reply.type('text/html').send(html)
-})
+const fastify = require("fastify")({
+  logger: true,
+});
 
-fastify.listen({host: host, port: port }, function (err, address) {
+fastify.get("/", function (request, reply) {
+  reply.type("text/html").send(html);
+});
+
+fastify.get("/media-dimensions", function (request, reply) {
+  ffprobe(
+    request.query.file,
+    { path: ffprobeStatic.path },
+    function (err, info) {
+      if (err) {
+        reply.status(400);
+        reply.send({
+          error: err.message,
+        });
+      } else {
+        if ("streams" in info) {
+          if (info.streams && info.streams[0]) {
+            reply.send(info.streams[0]);
+          }
+        } else {
+          reply.send({});
+        }
+      }
+    }
+  );
+});
+
+fastify.listen({ host: host, port: port }, function (err, address) {
   if (err) {
-    fastify.log.error(err)
-    process.exit(1)
+    fastify.log.error(err);
+    process.exit(1);
   }
-})
+});
 
 const html = `
 <!DOCTYPE html>
@@ -73,4 +99,4 @@ const html = `
     </section>
   </body>
 </html>
-`
+`;
